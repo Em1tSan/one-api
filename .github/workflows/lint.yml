@@ -28,10 +28,10 @@ jobs:
           CI: ""
         run: |
           cd web
-          npm ci
-          npm run lint
-          npm run build
-
+          git describe --tags > VERSION
+          REACT_APP_VERSION=$(git describe --tags) chmod u+x ./build.sh && ./build.sh
+          cd ..
+          
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v3
         with:

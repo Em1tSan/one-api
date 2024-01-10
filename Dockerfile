@@ -13,12 +13,18 @@ RUN chmod +x ./translate-en.sh && ./translate-en.sh
 
 FROM node:20 as web-builder
 
-WORKDIR /build
-COPY ./web/package*.json ./
-RUN npm ci --omit=dev
-COPY --from=translator ./app/web .
+
+WORKDIR /web
 COPY ./VERSION .
-RUN REACT_APP_VERSION=$(cat VERSION) npm run build
+COPY --from=translator ./app/web .
+
+WORKDIR /web/default
+RUN npm install
+RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat VERSION) npm run build
+
+WORKDIR /web/berry
+RUN npm install
+RUN DISABLE_ESLINT_PLUGIN='true' REACT_APP_VERSION=$(cat VERSION) npm run build
 
 FROM golang AS go-builder
 
@@ -31,7 +37,7 @@ COPY go.mod .
 COPY go.sum .
 RUN go mod download
 COPY --from=translator /app .
-COPY --from=web-builder /build/build ./web/build
+COPY --from=web-builder /web/build ./web/build
 RUN go build -ldflags "-s -w -X 'one-api/common.Version=$(cat VERSION)' -extldflags '-static'" -o one-api
 
 FROM alpine
